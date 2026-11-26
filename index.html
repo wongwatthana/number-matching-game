@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>เกมลากเลขจับคู่รูปภาพ (ง่าย → ยาก)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Tahoma", sans-serif;
+      background-color: #edf5ff;
+      color: #52627b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px 20px 36px;
+    }
+
+    h1 {
+      margin: 6px 0 4px;
+      font-size: 28px;
+      color: #375b9a;
+      text-align: center;
+    }
+
+    .subtitle {
+      margin: 4px 0 12px;
+      font-size: 14px;
+      color: #52627b;
+      text-align: center;
+    }
+
+    /* แถบเลือกระดับความยาก */
+    .level-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .level-btn {
+      background-color: #ffffff;
+      color: #375b9a;
+      border: 2px solid #c6d8f7;
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-family: "Tahoma", sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .level-btn:hover {
+      background-color: #f0f6ff;
+    }
+
+    .level-btn.active {
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 3px 8px rgba(55, 91, 154, 0.25);
+    }
+
+    .level-btn[data-level="easy"].active {
+      background-color: #2f9e66;
+    }
+
+    .level-btn[data-level="medium"].active {
+      background-color: #d9822b;
+    }
+
+    .level-btn[data-level="hard"].active {
+      background-color: #c93b4b;
+    }
+
+    /* แถบเลือกหมวดหมู่ */
+    .category-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .category-btn {
+      background-color: #dce8ff;
+      color: #34558f;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      padding: 7px 13px;
+      font-family: "Tahoma", sans-serif;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .category-btn:hover {
+      background-color: #cbdcf9;
+    }
+
+    .category-btn.active {
+      background-color: #5b82d7;
+      color: #ffffff;
+    }
+
+    /* แถบสถานะคะแนนและเวลา */
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      background-color: #ffffff;
+      border: 2px solid #d9e5f7;
+      border-radius: 12px;
+      padding: 8px 18px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .timer-badge {
+      color: #c93b4b;
+      background-color: #ffe8ed;
+      padding: 4px 10px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .timer-badge.show {
+      display: inline-block;
+    }
+
+    /* กล่องคำอธิบายกติกาของด่านปัจจุบัน */
+    .rule-banner {
+      width: 100%;
+      max-width: 920px;
+      background-color: #fff5fa;
+      border: 1px solid #f5d6e6;
+      color: #52627b;
+      font-size: 14px;
+      text-align: center;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    /* แถบเฉลยลำดับสำหรับด่านง่าย */
+    .reference-strip {
+      width: 100%;
+      max-width: 920px;
+      background-color: #e9f7ef;
+      border: 2px dashed #65bd8b;
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 14px;
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .reference-strip.show {
+      display: flex;
+    }
+
+    .ref-item {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #16824a;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* กระดานการ์ดรูปภาพ */
+    .board {
+      width: 100%;
+      max-width: 920px;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .card {
+      background-color: #ffffff;
+      border: 2px solid #d9e5f7;
+      border-radius: 14px;
+      padding: 14px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .card.drag-over {
+      border-color: #5b82d7;
+      background-color: #f5f9ff;
+      transform: translateY(-3px);
+    }
+
+    .card.completed {
+      border-color: #65bd8b;
+      background-color: #f7fdf9;
+    }
+
+    .card.shake {
+      animation: shakeAnim 0.35s ease;
+      border-color: #e05260;
+    }
+
+    @keyframes shakeAnim {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+    }
+
+    .emoji {
+      font-size: 50px;
+      line-height: 1.2;
+      margin: 4px 0 8px;
+    }
+
+    .item-name {
+      font-size: 14px;
+      font-weight: bold;
+      color: #58677e;
+      margin-bottom: 10px;
+      min-height: 18px;
+      text-align: center;
+    }
+
+    .drop-zone {
+      width: 100%;
+      background-color: #f2f6ff;
+      color: #7890bd;
+      border: 2px dashed #b9cbf0;
+      border-radius: 8px;
+      padding: 9px 6px;
+      font-size: 13px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .drop-zone.matched {
+      background-color: #e2f7e9;
+      color: #16824a;
+      border: 2px solid #65bd8b;
+    }
+
+    /* พื้นที่ตัวเลขสำหรับลาก */
+    .number-title {
+      font-size: 17px;
+      font-weight: bold;
+      color: #52627b;
+      margin: 4px 0 10px;
+    }
+
+    .number-area {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 12px;
+      min-height: 68px;
+    }
+
+    .number-tile {
+      width: 64px;
+      height: 64px;
+      background-color: #5b82d7;
+      color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 0 #3a5aa3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: bold;
+      cursor: grab;
+      touch-action: none;
+      transition: transform 0.1s ease, background-color 0.15s ease;
+    }
+
+    .number-tile:hover {
+      background-color: #4b73c9;
+    }
+
+    .number-tile.dragging {
+      cursor: grabbing;
+      background-color: #345da8;
+      opacity: 0.45;
+    }
+
+    .number-tile.disabled {
+      background-color: #aab8d2;
+      box-shadow: none;
+      cursor: default;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .floating-tile {
+      position: fixed;
+      z-index: 9999;
+      pointer-events: none;
+      width: 64px;
+      height: 64px;
+      background-color: #345da8;
+      color: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 20px rgba(37, 63, 120, 0.28);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: bold;
+      transform: translate(-50%, -50%) scale(1.08);
+    }
+
+    .message {
+      font-size: 17px;
+      font-weight: bold;
+      color: #52627b;
+      text-align: center;
+      min-height: 26px;
+      margin: 8px 0 14px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-family: "Tahoma", sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .btn-help {
+      background-color: #e6efff;
+      color: #375b9a;
+    }
+    .btn-help:hover { background-color: #d3e2ff; }
+
+    .btn-reset {
+      background-color: #ffe8ed;
+      color: #a9435a;
+    }
+    .btn-reset:hover { background-color: #ffd6e0; }
+
+    .btn-next {
+      background-color: #e1f6e9;
+      color: #18794a;
+    }
+    .btn-next:hover { background-color: #c9eed8; }
+
+    /* หน้าต่าง Pop-up (วิธีเล่น และ สรุปผล) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(31, 47, 77, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 10000;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      padding: 22px 24px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+      color: #44536a;
+    }
+
+    .modal-box h2 {
+      margin: 0 0 12px;
+      color: #375b9a;
+      font-size: 22px;
+      text-align: center;
+    }
+
+    .modal-box p {
+      font-size: 15px;
+      line-height: 1.6;
+      text-align: center;
+      margin: 0 0 14px;
+    }
+
+    .modal-box ul {
+      padding-left: 20px;
+      line-height: 1.65;
+      font-size: 14px;
+      margin: 0 0 16px;
+    }
+
+    .modal-box li {
+      margin-bottom: 6px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 เกมลากเลขจับคู่รูปภาพ</h1>
+  <p class="subtitle">ผ่านด่านจากระดับง่าย → ปานกลาง → ยาก เพื่อสะสมคะแนนสูงสุด!</p>
+
+  <!-- แถบเลือกระดับความยาก -->
+  <div class="level-bar" id="levelBar">
+    <button class="level-btn active" data-level="easy">🟢 ด่าน 1: ระดับง่าย</button>
+    <button class="level-btn" data-level="medium">🟡 ด่าน 2: ระดับปานกลาง</button>
+    <button class="level-btn" data-level="hard">🔴 ด่าน 3: ระดับยาก</button>
+  </div>
+
+  <!-- แถบเลือกหมวดหมู่ -->
+  <div class="category-bar" id="categoryBar"></div>
+
+  <!-- แถบคะแนนและเวลา -->
+  <div class="status-bar">
+    <span id="levelIndicator">ด่านปัจจุบัน: 🟢 ระดับง่าย</span>
+    <span id="scoreLabel">คะแนน: 0 ⭐</span>
+    <span class="timer-badge" id="timerBadge">⏱️ เวลา: 35 วินาที</span>
+  </div>
+
+  <!-- คำอธิบายกติกาของด่านปัจจุบัน -->
+  <div class="rule-banner" id="ruleBanner"></div>
+
+  <!-- แถบเฉลยลำดับ (แสดงเฉพาะด่านง่าย) -->
+  <div class="reference-strip" id="referenceStrip"></div>
+
+  <!-- กระดานการ์ดรูปภาพ -->
+  <div class="board" id="board"></div>
+
+  <!-- แถบตัวเลขสำหรับลาก -->
+  <div class="number-title">ลากตัวเลขด้านล่างไปวางบนรูปภาพให้ตรงลำดับ</div>
+  <div class="number-area" id="numberArea"></div>
+
+  <!-- ข้อความแจ้งเตือน -->
+  <div class="message" id="messageBox"></div>
+
+  <!-- ปุ่มควบคุม -->
+  <div class="controls">
+    <button class="btn btn-help" id="helpBtn">📖 วิธีเล่น</button>
+    <button class="btn btn-reset" id="resetBtn">🔄 เริ่มด่านนี้ใหม่</button>
+    <button class="btn btn-next" id="nextLevelBtn">➡️ ไปด่านถัดไป</button>
+  </div>
+
+  <!-- Modal วิธีเล่น -->
+  <div class="modal-overlay" id="helpModal">
+    <div class="modal-box">
+      <h2>📖 วิธีเล่นเกมลากเลขจับคู่</h2>
+      <ul>
+        <li><strong>เป้าหมาย:</strong> ลากแผ่นตัวเลข (1 ถึง 5) ไปวางบนการ์ดรูปภาพให้ตรงกับลำดับที่ถูกต้องของหมวดนั้น</li>
+        <li><strong>🟢 ด่าน 1 (ง่าย):</strong> มีแถบเฉลยลำดับด้านบนให้ดูเป็นตัวช่วย ไม่จำกัดเวลา</li>
+        <li><strong>🟡 ด่าน 2 (ปานกลาง):</strong> ซ่อนแถบเฉลย ต้องจำลำดับจากด่านแรกให้ได้</li>
+        <li><strong>🔴 ด่าน 3 (ยาก):</strong> ซ่อนแถบเฉลย ซ่อนชื่อรูปภาพ และจับเวลา 35 วินาที!</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn btn-next" id="closeHelpBtn">เข้าใจแล้ว เริ่มเล่นเลย!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal สรุปผลผ่านด่าน / หมดเวลา -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal-box">
+      <h2 id="resultTitle">🎉 ยินดีด้วย! ผ่านด่านแล้ว</h2>
+      <p id="resultText"></p>
+      <div class="modal-actions">
+        <button class="btn btn-reset" id="modalReplayBtn">🔄 เล่นด่านนี้อีกครั้ง</button>
+        <button class="btn btn-next" id="modalNextBtn">➡️ ด่านถัดไป</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ข้อมูลหมวดหมู่และลำดับที่ถูกต้อง (1 -> 5)
+    const CATEGORIES = {
+      fruits: {
+        label: "🍎 ผลไม้",
+        hint: "เรียงลำดับผลไม้ตามหมายเลข 1 ถึง 5",
+        items: [
+          { num: 1, emoji: "🍎", name: "แอปเปิล" },
+          { num: 2, emoji: "🍌", name: "กล้วยหอม" },
+          { num: 3, emoji: "🍊", name: "ส้ม" },
+          { num: 4, emoji: "🍇", name: "องุ่น" },
+          { num: 5, emoji: "🍉", name: "แตงโม" }
+        ]
+      },
+      animals: {
+        label: "🐶 สัตว์น่ารัก",
+        hint: "เรียงลำดับสัตว์ตามหมายเลข 1 ถึง 5",
+        items: [
+          { num: 1, emoji: "🐶", name: "สุนัข" },
+          { num: 2, emoji: "🐱", name: "แมว" },
+          { num: 3, emoji: "🐰", name: "กระต่าย" },
+          { num: 4, emoji: "🐼", name: "แพนด้า" },
+          { num: 5, emoji: "🦁", name: "สิงโต" }
+        ]
+      },
+      vehicles: {
+        label: "🚗 ยานพาหนะ",
+        hint: "เรียงลำดับยานพาหนะจากเล็กไปใหญ่ (1 ถึง 5)",
+        items: [
+          { num: 1, emoji: "🚲", name: "จักรยาน" },
+          { num: 2, emoji: "🛵", name: "มอเตอร์ไซค์" },
+          { num: 3, emoji: "🚗", name: "รถยนต์" },
+          { num: 4, emoji: "🚌", name: "รถบัส" },
+          { num: 5, emoji: "✈️", name: "เครื่องบิน" }
+        ]
+      },
+      food: {
+        label: "🍱 ของกินอร่อย",
+        hint: "เรียงลำดับเมนูอาหารตามหมายเลข 1 ถึง 5",
+        items: [
+          { num: 1, emoji: "🍳", name: "ไข่ดาว" },
+          { num: 2, emoji: "🍜", name: "ก๋วยเตี๋ยว" },
+          { num: 3, emoji: "🍔", name: "เบอร์เกอร์" },
+          { num: 4, emoji: "🍕", name: "พิซซ่า" },
+          { num: 5, emoji: "🍰", name: "เค้ก" }
+        ]
+      }
+    };
+
+    const LEVELS = {
+      easy: {
+        name: "🟢 ระดับง่าย",
+        rule: "🟢 กติการะดับง่าย: ดูแถบเฉลยลำดับด้านบน แล้วลากตัวเลข 1–5 ไปวางให้ตรงรูปภาพ (ไม่จับเวลา)",
+        showReference: true,
+        hideNames: false,
+        timeLimit: 0,
+        next: "medium"
+      },
+      medium: {
+        name: "🟡 ระดับปานกลาง",
+        rule: "🟡 กติการะดับปานกลาง: ปิดแถบเฉลยแล้ว! ลองนึกทบทวนลำดับ 1–5 แล้วลากตัวเลขไปจับคู่ให้ถูกต้อง",
+        showReference: false,
+        hideNames: false,
+        timeLimit: 0,
+        next: "hard"
+      },
+      hard: {
+        name: "🔴 ระดับยาก",
+        rule: "🔴 กติการะดับยาก: ซ่อนทั้งแถบเฉลยและชื่อรูปภาพ แถมจับเวลา 35 วินาที รีบจับคู่ให้ทันนะ!",
+        showReference: false,
+        hideNames: true,
+        timeLimit: 35,
+        next: "easy"
+      }
+    };
+
+    // สถานะของเกม
+    let currentLevel = "easy";
+    let currentCategory = "fruits";
+    let score = 0;
+    let matchedCount = 0;
+    let timerInterval = null;
+    let timeLeft = 0;
+    let isGameOver = false;
+
+    // อ้างอิง DOM
+    const levelBar = document.getElementById("levelBar");
+    const categoryBar = document.getElementById("categoryBar");
+    const levelIndicator = document.getElementById("levelIndicator");
+    const scoreLabel = document.getElementById("scoreLabel");
+    const timerBadge = document.getElementById("timerBadge");
+    const ruleBanner = document.getElementById("ruleBanner");
+    const referenceStrip = document.getElementById("referenceStrip");
+    const board = document.getElementById("board");
+    const numberArea = document.getElementById("numberArea");
+    const messageBox = document.getElementById("messageBox");
+
+    const helpModal = document.getElementById("helpModal");
+    const resultModal = document.getElementById("resultModal");
+    const resultTitle = document.getElementById("resultTitle");
+    const resultText = document.getElementById("resultText");
+
+    // ฟังก์ชันสุ่มสลับตำแหน่งอาร์เรย์
+    function shuffle(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    // สร้างปุ่มเลือกหมวดหมู่
+    function renderCategoryButtons() {
+      categoryBar.innerHTML = "";
+      Object.entries(CATEGORIES).forEach(([key, cat]) => {
+        const btn = document.createElement("button");
+        btn.className = "category-btn" + (key === currentCategory ? " active" : "");
+        btn.textContent = cat.label;
+        btn.addEventListener("click", () => {
+          currentCategory = key;
+          renderCategoryButtons();
+          initGame();
+        });
+        categoryBar.appendChild(btn);
+      });
+    }
+
+    // อัปเดตแถบระดับความยาก
+    function updateLevelButtons() {
+      document.querySelectorAll(".level-btn").forEach((btn) => {
+        btn.classList.toggle("active", btn.dataset.level === currentLevel);
+      });
+    }
+
+    // จัดการตัวจับเวลา
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      if (seconds <= 0) {
+        timerBadge.classList.remove("show");
+        return;
+      }
+      timeLeft = seconds;
+      timerBadge.textContent = `⏱️ เวลา: ${timeLeft} วินาที`;
+      timerBadge.classList.add("show");
+
+      timerInterval = setInterval(() => {
+        if (isGameOver) {
+          clearInterval(timerInterval);
+          return;
+        }
+        timeLeft--;
+        timerBadge.textContent = `⏱️ เวลา: ${timeLeft} วินาที`;
+        if (timeLeft <= 0) {
+          clearInterval(timerInterval);
+          handleTimeOut();
+        }
+      }, 1000);
+    }
+
+    function handleTimeOut() {
+      isGameOver = true;
+      messageBox.textContent = "⏰ หมดเวลาแล้ว! ลองใหม่อีกครั้งนะ";
+      messageBox.style.color = "#c93b4b";
+      resultTitle.textContent = "⏰ หมดเวลาแล้ว!";
+      resultText.textContent = `คุณจับคู่ได้ ${matchedCount} จาก 5 ภาพ คะแนนสะสมปัจจุบัน ${score} ⭐`;
+      document.getElementById("modalNextBtn").style.display = "none";
+      resultModal.classList.add("show");
+    }
+
+    // เริ่ม/รีเซ็ตกระดานเกม
+    function initGame() {
+      isGameOver = false;
+      matchedCount = 0;
+      messageBox.textContent = "";
+      messageBox.style.color = "#52627b";
+      resultModal.classList.remove("show");
+
+      const levelConfig = LEVELS[currentLevel];
+      const catConfig = CATEGORIES[currentCategory];
+
+      updateLevelButtons();
+      levelIndicator.textContent = `ด่านปัจจุบัน: ${levelConfig.name}`;
+      ruleBanner.textContent = levelConfig.rule;
+
+      // แสดงหรือซ่อนแถบเฉลยลำดับ
+      if (levelConfig.showReference) {
+        referenceStrip.innerHTML = catConfig.items
+          .map((item) => `<span class="ref-item">${item.num} = ${item.emoji} ${item.name}</span>`)
+          .join("");
+        referenceStrip.classList.add("show");
+      } else {
+        referenceStrip.classList.remove("show");
+      }
+
+      // สุ่มลำดับการ์ดรูปภาพบนกระดาน
+      const shuffledCards = shuffle(catConfig.items);
+      board.innerHTML = "";
+      shuffledCards.forEach((item) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.dataset.num = item.num;
+
+        const nameText = levelConfig.hideNames ? "❓ ปริศนา" : item.name;
+        card.innerHTML = `
+          <div class="emoji">${item.emoji}</div>
+          <div class="item-name">${nameText}</div>
+          <div class="drop-zone">วางตัวเลขที่นี่</div>
+        `;
+        board.appendChild(card);
+      });
+
+      // สร้างแผ่นตัวเลข 1–5 (สุ่มลำดับ)
+      const shuffledNums = shuffle([1, 2, 3, 4, 5]);
+      numberArea.innerHTML = "";
+      shuffledNums.forEach((num) => {
+        const tile = document.createElement("div");
+        tile.className = "number-tile";
+        tile.textContent = num;
+        tile.dataset.num = num;
+        setupDragEvents(tile);
+        numberArea.appendChild(tile);
+      });
+
+      startTimer(levelConfig.timeLimit);
+    }
+
+    // ระบบลากวาง (รองรับทั้งเมาส์และหน้าจอสัมผัส)
+    function setupDragEvents(tile) {
+      tile.addEventListener("pointerdown", (e) => {
+        if (isGameOver || tile.classList.contains("disabled")) return;
+        e.preventDefault();
+
+        const draggedNum = tile.dataset.num;
+        tile.classList.add("dragging");
+
+        // สร้างตัวลอยตามนิ้ว/เมาส์
+        const floating = document.createElement("div");
+        floating.className = "floating-tile";
+        floating.textContent = draggedNum;
+        floating.style.left = `${e.clientX}px`;
+        floating.style.top = `${e.clientY}px`;
+        document.body.appendChild(floating);
+
+        let hoveredCard = null;
+
+        function onPointerMove(ev) {
+          floating.style.left = `${ev.clientX}px`;
+          floating.style.top = `${ev.clientY}px`;
+
+          // ตรวจหาการ์ดที่อยู่ใต้ตำแหน่งเมาส์/นิ้ว
+          const elemBelow = document.elementFromPoint(ev.clientX, ev.clientY);
+          const cardBelow = elemBelow ? elemBelow.closest(".card") : null;
+
+          if (hoveredCard && hoveredCard !== cardBelow) {
+            hoveredCard.classList.remove("drag-over");
+          }
+          if (cardBelow && !cardBelow.classList.contains("completed")) {
+            cardBelow.classList.add("drag-over");
+            hoveredCard = cardBelow;
+          } else {
+            hoveredCard = null;
+          }
+        }
+
+        function onPointerUp() {
+          window.removeEventListener("pointermove", onPointerMove);
+          window.removeEventListener("pointerup", onPointerUp);
+
+          tile.classList.remove("dragging");
+          floating.remove();
+
+          if (hoveredCard) {
+            hoveredCard.classList.remove("drag-over");
+            checkMatch(hoveredCard, tile);
+          }
+        }
+
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+      });
+    }
+
+    // ตรวจสอบการจับคู่
+    function checkMatch(card, tile) {
+      if (isGameOver || card.classList.contains("completed")) return;
+
+      const targetNum = card.dataset.num;
+      const droppedNum = tile.dataset.num;
+
+      if (targetNum === droppedNum) {
+        // ถูกต้อง
+        card.classList.add("completed");
+        const dropZone = card.querySelector(".drop-zone");
+        dropZone.textContent = `✅ หมายเลข ${droppedNum}`;
+        dropZone.classList.add("matched");
+
+        // เปิดเผยชื่อจริงหากอยู่ด่านยาก
+        const realItem = CATEGORIES[currentCategory].items.find(i => String(i.num) === targetNum);
+        if (realItem) {
+          card.querySelector(".item-name").textContent = realItem.name;
+        }
+
+        tile.classList.add("disabled");
+        matchedCount++;
+        score += 10;
+        scoreLabel.textContent = `คะแนน: ${score} ⭐`;
+        messageBox.textContent = "✨ ยอดเยี่ยม! จับคู่ถูกต้อง (+10 คะแนน)";
+        messageBox.style.color = "#16824a";
+
+        if (matchedCount === 5) {
+          handleLevelComplete();
+        }
+      } else {
+        // ผิด
+        card.classList.remove("shake");
+        void card.offsetWidth; // รีเซ็ตแอนิเมชัน
+        card.classList.add("shake");
+        messageBox.textContent = "❌ ยังไม่ตรงลำดับนะ ลองใหม่อีกครั้ง!";
+        messageBox.style.color = "#c93b4b";
+      }
+    }
+
+    // เมื่อผ่านครบทั้ง 5 ภาพ
+    function handleLevelComplete() {
+      isGameOver = true;
+      clearInterval(timerInterval);
+
+      const bonus = currentLevel === "hard" ? timeLeft * 2 : 20;
+      score += bonus;
+      scoreLabel.textContent = `คะแนน: ${score} ⭐`;
+
+      const nextLvl = LEVELS[currentLevel].next;
+      resultTitle.textContent = `🎉 ผ่าน${LEVELS[currentLevel].name}แล้ว!`;
+      resultText.textContent = `รับโบนัสผ่านด่าน +${bonus} คะแนน | คะแนนรวมทั้งหมด ${score} ⭐`;
+
+      const modalNextBtn = document.getElementById("modalNextBtn");
+      modalNextBtn.style.display = "inline-block";
+      modalNextBtn.textContent = currentLevel === "hard" ? "🔄 กลับไปเริ่มด่านง่าย" : "➡️ ไปด่านถัดไป";
+
+      resultModal.classList.add("show");
+    }
+
+    // Event Listeners ของปุ่มต่างๆ
+    levelBar.addEventListener("click", (e) => {
+      const btn = e.target.closest(".level-btn");
+      if (!btn) return;
+      currentLevel = btn.dataset.level;
+      initGame();
+    });
+
+    document.getElementById("helpBtn").addEventListener("click", () => {
+      helpModal.classList.add("show");
+    });
+
+    document.getElementById("closeHelpBtn").addEventListener("click", () => {
+      helpModal.classList.remove("show");
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      initGame();
+    });
+
+    document.getElementById("nextLevelBtn").addEventListener("click", () => {
+      currentLevel = LEVELS[currentLevel].next;
+      initGame();
+    });
+
+    document.getElementById("modalReplayBtn").addEventListener("click", () => {
+      initGame();
+    });
+
+    document.getElementById("modalNextBtn").addEventListener("click", () => {
+      currentLevel = LEVELS[currentLevel].next;
+      initGame();
+    });
+
+    // เริ่มต้นเกมครั้งแรกเมื่อเปิดหน้าเว็บ
+    renderCategoryButtons();
+    initGame();
+  </script>
+</body>
+</html>
